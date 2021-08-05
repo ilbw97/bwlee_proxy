@@ -3,64 +3,45 @@ package main
 import (
 	"bwlee_proxy/reverse"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 )
 
-func (efgd *abcd) S_info_Handler(w http.ResponseWriter, r *http.Request) {
+type serverinfo struct {
+	rparray *reverse.RpServerArray
+}
+
+func (rvinfo *serverinfo) ServerInfoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "GET":
-		var info *reverse.Information
-		get_info, err := json.Marshal(info)
-		if err != nil {
-			log.Println(err)
-		}
-		io.WriteString(w, string(get_info))
-		w.Write([]byte("\n"))
-		// jsonfile, err := os.Create("/root/go/src/bwlee_proxy/information.json")
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-		// defer jsonfile.Close()
-
-		// jsonfile.Write(get_info)
-		// fmt.Println("JSON DATA WRRITEN TO \n", jsonfile.Name())
-		// reverse.Rvproxy_handle()
-
 	case "POST":
-		var info *reverse.Information
+		log.Println("###ServerInfoHandler 'POST' start###")
+		var serverinfo *reverse.ServerInfo
 
-		err := json.NewDecoder(r.Body).Decode(&info)
+		err := json.NewDecoder(r.Body).Decode(&serverinfo)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		log.Printf("Host : %s \n", serverinfo.Host)
+		log.Printf("Origin : %s \n", serverinfo.Origin)
+		log.Printf("Port : %d \n", serverinfo.Port)
+		rvinfo.rparray.RvProxyHandle(serverinfo)
 
-		log.Printf("sending %v \n", info)
-		log.Printf("Host : %v, Origin : %v, Port : %v \n", info.Host, info.Origin, info.Port)
-
-		// reverse.Rvproxy_handle(info)
-		efgd.reverseInfo.Rvproxy_handle(info)
-
+	case "GET":
+		io.WriteString(w, string(r.Method)+"\n")
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "invalid type of method")
 	}
 }
-
-type abcd struct {
-	reverseInfo *reverse.Rpserver_array
-}
-
 func main() {
+	log.Println("###bwlee_proxy main start###")
+	var rvinfo serverinfo
 
-	var efgd abcd
-
-	efgd.reverseInfo = reverse.Reverse_init()
-
+	rvinfo.rparray = reverse.RvInit()
+	log.Println("###reverse.RvInit() end###")
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", efgd.S_info_Handler)
+	mux.HandleFunc("/", rvinfo.ServerInfoHandler)
 	log.Fatal(http.ListenAndServe(":301", mux))
+	log.Printf("###bwlee_api from 301 port start###\n")
 }
